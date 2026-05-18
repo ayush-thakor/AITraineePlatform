@@ -1,26 +1,20 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase } from "@/lib/mongodb";
-import { Quiz } from "@/models/Quiz";
+import { requireApiUser } from "@/lib/auth";
+import { getQuizByModule } from "@/lib/dataStore";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
 export async function GET(_request: Request, { params }: RouteContext) {
-  await connectToDatabase();
+  const auth = await requireApiUser();
+
+  if (auth.response) {
+    return auth.response;
+  }
 
   const { id } = await params;
-  const quiz = (await Quiz.findOne({ moduleId: id }).lean()) as
-    | {
-        moduleId: string;
-        questions: Array<{
-          question: string;
-          options: string[];
-          correctAnswerIndex: number;
-          explanation: string;
-        }>;
-      }
-    | null;
+  const quiz = await getQuizByModule(id);
 
   if (!quiz) {
     return NextResponse.json({ error: "Quiz not found." }, { status: 404 });

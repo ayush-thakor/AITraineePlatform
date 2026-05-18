@@ -1,7 +1,13 @@
 import { ModuleForm } from "@/components/ModuleForm";
 import { PageHeader } from "@/components/PageHeader";
+import { requireRole } from "@/lib/auth";
+import { UPLOAD_ROLES } from "@/lib/users";
 
-export default function NewModulePage() {
+export const dynamic = "force-dynamic";
+
+export default async function NewModulePage() {
+  await requireRole(UPLOAD_ROLES);
+
   return (
     <div>
       <PageHeader

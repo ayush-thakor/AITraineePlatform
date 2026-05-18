@@ -1,7 +1,12 @@
 import { PageHeader } from "@/components/PageHeader";
 import { SupportChat } from "@/components/SupportChat";
+import { requireCurrentUser } from "@/lib/auth";
 
-export default function SupportPage() {
+export const dynamic = "force-dynamic";
+
+export default async function SupportPage() {
+  await requireCurrentUser();
+
   return (
     <div>
       <PageHeader

@@ -1,20 +1,29 @@
 import { NextResponse } from "next/server";
+import { requireApiUser } from "@/lib/auth";
+import { createTrainingModule, listModules } from "@/lib/dataStore";
 import { saveModuleChunks } from "@/lib/embeddings";
-import { connectToDatabase } from "@/lib/mongodb";
-import { TrainingModule } from "@/models/TrainingModule";
+import { UPLOAD_ROLES } from "@/lib/users";
 
 export async function GET() {
-  await connectToDatabase();
+  const auth = await requireApiUser();
 
-  const modules = await TrainingModule.find({}, { title: 1, description: 1, createdAt: 1 })
-    .sort({ createdAt: -1 })
-    .lean();
+  if (auth.response) {
+    return auth.response;
+  }
+
+  const modules = await listModules();
 
   return NextResponse.json({ modules });
 }
 
 export async function POST(request: Request) {
   try {
+    const auth = await requireApiUser(UPLOAD_ROLES);
+
+    if (auth.response) {
+      return auth.response;
+    }
+
     const { title, description, sopContent } = await request.json();
 
     if (!title || !sopContent) {
@@ -24,9 +33,7 @@ export async function POST(request: Request) {
       );
     }
 
-    await connectToDatabase();
-
-    const module = await TrainingModule.create({
+    const module = await createTrainingModule({
       title,
       description,
       sopContent

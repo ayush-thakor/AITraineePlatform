@@ -1,15 +1,21 @@
 import { NextResponse } from "next/server";
+import { requireApiUser } from "@/lib/auth";
+import { createSupportQuery } from "@/lib/dataStore";
 import { searchRelevantChunks } from "@/lib/embeddings";
 import { groq, GROQ_MODEL, isGroqConfigured } from "@/lib/groq";
-import { connectToDatabase } from "@/lib/mongodb";
 import { SUPPORT_PROMPT } from "@/lib/prompts";
-import { SupportQuery } from "@/models/SupportQuery";
 
 const ESCALATION_THRESHOLD = 0.45;
 
 export async function POST(request: Request) {
   try {
-    const { moduleId, question, traineeId } = await request.json();
+    const auth = await requireApiUser();
+
+    if (auth.response) {
+      return auth.response;
+    }
+
+    const { moduleId, question } = await request.json();
 
     if (!isGroqConfigured) {
       return NextResponse.json(
@@ -24,8 +30,6 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-
-    await connectToDatabase();
 
     const rankedChunks = await searchRelevantChunks(moduleId, question);
     const bestScore = rankedChunks[0]?.score ?? 0;
@@ -66,8 +70,9 @@ ${question}`
       escalated = false;
     }
 
-    await SupportQuery.create({
-      traineeId: traineeId || "guest",
+    await createSupportQuery({
+      traineeId: auth.user.id,
+      traineeName: auth.user.name,
       question,
       aiAnswer: answer,
       escalated

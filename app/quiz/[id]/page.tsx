@@ -1,7 +1,8 @@
 import { PageHeader } from "@/components/PageHeader";
 import { QuizPanel } from "@/components/QuizPanel";
-import { connectToDatabase } from "@/lib/mongodb";
-import { TrainingModule } from "@/models/TrainingModule";
+import { requireCurrentUser } from "@/lib/auth";
+import { getModuleById } from "@/lib/dataStore";
+import { QUIZ_SUBMIT_ROLES, UPLOAD_ROLES } from "@/lib/users";
 import { notFound } from "next/navigation";
 
 type QuizPageProps = {
@@ -11,13 +12,10 @@ type QuizPageProps = {
 export const dynamic = "force-dynamic";
 
 export default async function QuizPage({ params }: QuizPageProps) {
+  const user = await requireCurrentUser();
   const { id } = await params;
 
-  await connectToDatabase();
-
-  const module = (await TrainingModule.findById(id).lean()) as
-    | { _id: string; title: string; description?: string; sopContent: string }
-    | null;
+  const module = await getModuleById(id);
 
   if (!module) {
     notFound();
@@ -29,7 +27,13 @@ export default async function QuizPage({ params }: QuizPageProps) {
         title="Quiz"
         description="Generate a lightweight MCQ test from the saved SOP and score it with deterministic pass/fail rules."
       />
-      <QuizPanel moduleId={String(module._id)} moduleTitle={module.title} />
+      <QuizPanel
+        moduleId={String(module._id)}
+        moduleTitle={module.title}
+        currentUserName={user.name}
+        canManageQuiz={UPLOAD_ROLES.includes(user.role)}
+        canSubmit={QUIZ_SUBMIT_ROLES.includes(user.role)}
+      />
     </div>
   );
 }

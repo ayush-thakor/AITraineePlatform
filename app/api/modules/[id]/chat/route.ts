@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
+import { requireApiUser } from "@/lib/auth";
 import { searchRelevantChunks } from "@/lib/embeddings";
 import { groq, GROQ_MODEL, isGroqConfigured } from "@/lib/groq";
-import { connectToDatabase } from "@/lib/mongodb";
 import { TRAINING_PROMPT } from "@/lib/prompts";
 
 type RouteContext = {
@@ -10,6 +10,12 @@ type RouteContext = {
 
 export async function POST(request: Request, { params }: RouteContext) {
   try {
+    const auth = await requireApiUser();
+
+    if (auth.response) {
+      return auth.response;
+    }
+
     const { id } = await params;
     const { question } = await request.json();
 
@@ -23,8 +29,6 @@ export async function POST(request: Request, { params }: RouteContext) {
     if (!question) {
       return NextResponse.json({ error: "Question is required." }, { status: 400 });
     }
-
-    await connectToDatabase();
 
     const rankedChunks = await searchRelevantChunks(id, question);
     const contextText = rankedChunks

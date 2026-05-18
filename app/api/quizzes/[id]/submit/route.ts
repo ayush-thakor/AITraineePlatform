@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase } from "@/lib/mongodb";
-import { Quiz } from "@/models/Quiz";
-import { Trainee } from "@/models/Trainee";
+import { requireApiUser } from "@/lib/auth";
+import { getQuizByModule, recordQuizAttempt } from "@/lib/dataStore";
+import { QUIZ_SUBMIT_ROLES } from "@/lib/users";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -9,26 +9,20 @@ type RouteContext = {
 
 export async function POST(request: Request, { params }: RouteContext) {
   try {
+    const auth = await requireApiUser(QUIZ_SUBMIT_ROLES);
+
+    if (auth.response) {
+      return auth.response;
+    }
+
     const { id } = await params;
-    const { answers, traineeName } = await request.json();
+    const { answers } = await request.json();
 
     if (!Array.isArray(answers)) {
       return NextResponse.json({ error: "Answers are required." }, { status: 400 });
     }
 
-    await connectToDatabase();
-
-    const quiz = (await Quiz.findOne({ moduleId: id }).lean()) as
-      | {
-          moduleId: string;
-          questions: Array<{
-            question: string;
-            options: string[];
-            correctAnswerIndex: number;
-            explanation: string;
-          }>;
-        }
-      | null;
+    const quiz = await getQuizByModule(id);
 
     if (!quiz) {
       return NextResponse.json({ error: "Quiz not found." }, { status: 404 });
@@ -51,27 +45,11 @@ export async function POST(request: Request, { params }: RouteContext) {
     const correctCount = results.filter((item) => item.isCorrect).length;
     const score = Math.round((correctCount / quiz.questions.length) * 100);
     const passed = score >= 70;
-    const safeTraineeName =
-      typeof traineeName === "string" && traineeName.trim() ? traineeName.trim() : "Guest Trainee";
 
-    const trainee = await Trainee.findOneAndUpdate(
-      { name: safeTraineeName },
-      {
-        $setOnInsert: { name: safeTraineeName },
-        $addToSet: { completedModules: id },
-        $push: {
-          scores: {
-            moduleId: id,
-            score,
-            passed
-          }
-        }
-      },
-      { upsert: true, new: true }
-    );
+    const traineeId = await recordQuizAttempt(auth.user, id, score, passed);
 
     return NextResponse.json({
-      traineeId: trainee.id,
+      traineeId,
       score,
       passed,
       results

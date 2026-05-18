@@ -1,5 +1,5 @@
 import { groq, GROQ_EMBEDDING_MODEL, GROQ_USE_EMBEDDINGS } from "@/lib/groq";
-import { SopChunk } from "@/models/SopChunk";
+import { listModuleChunks, replaceModuleChunks } from "@/lib/dataStore";
 import { chunkText } from "@/utils/chunkText";
 import { cosineSimilarity } from "@/utils/cosineSimilarity";
 import { lexicalScore } from "@/utils/lexicalScore";
@@ -27,9 +27,8 @@ export async function createEmbedding(text: string) {
 export async function saveModuleChunks(moduleId: string, sopContent: string) {
   const chunks = chunkText(sopContent);
 
-  await SopChunk.deleteMany({ moduleId });
-
   if (chunks.length === 0) {
+    await replaceModuleChunks(moduleId, []);
     return [];
   }
 
@@ -43,16 +42,12 @@ export async function saveModuleChunks(moduleId: string, sopContent: string) {
     embedding: embeddings[index]
   }));
 
-  await SopChunk.insertMany(records);
+  await replaceModuleChunks(moduleId, records);
   return records;
 }
 
 export async function searchRelevantChunks(moduleId: string, question: string, limit = 4) {
-  const chunks = (await SopChunk.find({ moduleId }).lean()) as unknown as Array<{
-    moduleId: string;
-    text: string;
-    embedding: number[];
-  }>;
+  const chunks = await listModuleChunks(moduleId);
 
   if (!GROQ_USE_EMBEDDINGS || !GROQ_EMBEDDING_MODEL) {
     return chunks

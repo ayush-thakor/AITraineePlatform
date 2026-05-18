@@ -1,7 +1,7 @@
 import { PageHeader } from "@/components/PageHeader";
 import { TrainingChat } from "@/components/TrainingChat";
-import { connectToDatabase } from "@/lib/mongodb";
-import { TrainingModule } from "@/models/TrainingModule";
+import { requireCurrentUser } from "@/lib/auth";
+import { getModuleById } from "@/lib/dataStore";
 import { notFound } from "next/navigation";
 
 type TrainingPageProps = {
@@ -11,13 +11,11 @@ type TrainingPageProps = {
 export const dynamic = "force-dynamic";
 
 export default async function TrainingPage({ params }: TrainingPageProps) {
+  await requireCurrentUser();
+
   const { id } = await params;
 
-  await connectToDatabase();
-
-  const module = (await TrainingModule.findById(id).lean()) as
-    | { _id: string; title: string; description?: string; sopContent: string }
-    | null;
+  const module = await getModuleById(id);
 
   if (!module) {
     notFound();

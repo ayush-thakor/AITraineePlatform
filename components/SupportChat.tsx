@@ -53,8 +53,7 @@ export function SupportChat() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             moduleId,
-            question,
-            traineeId: "guest"
+            question
           })
         })
       );

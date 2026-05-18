@@ -16,6 +16,7 @@ declare global {
 }
 
 const cached = global.mongooseCache ?? { conn: null, promise: null };
+let unavailableUntil = 0;
 
 global.mongooseCache = cached;
 
@@ -26,10 +27,26 @@ export async function connectToDatabase() {
 
   if (!cached.promise) {
     cached.promise = mongoose.connect(MONGODB_URI as string, {
-      bufferCommands: false
+      bufferCommands: false,
+      serverSelectionTimeoutMS: 1500
     });
   }
 
   cached.conn = await cached.promise;
   return cached.conn;
+}
+
+export async function tryConnectToDatabase() {
+  if (Date.now() < unavailableUntil) {
+    return null;
+  }
+
+  try {
+    return await connectToDatabase();
+  } catch {
+    cached.conn = null;
+    cached.promise = null;
+    unavailableUntil = Date.now() + 5000;
+    return null;
+  }
 }

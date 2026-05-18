@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase } from "@/lib/mongodb";
 import { isGroqConfigured } from "@/lib/groq";
+import { requireApiUser } from "@/lib/auth";
+import { getModuleById, upsertQuiz } from "@/lib/dataStore";
 import { generateQuizFromSop } from "@/lib/quiz";
-import { Quiz } from "@/models/Quiz";
-import { TrainingModule } from "@/models/TrainingModule";
+import { UPLOAD_ROLES } from "@/lib/users";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -11,6 +11,12 @@ type RouteContext = {
 
 export async function POST(_request: Request, { params }: RouteContext) {
   try {
+    const auth = await requireApiUser(UPLOAD_ROLES);
+
+    if (auth.response) {
+      return auth.response;
+    }
+
     const { id } = await params;
 
     if (!isGroqConfigured) {
@@ -20,11 +26,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
       );
     }
 
-    await connectToDatabase();
-
-    const module = (await TrainingModule.findById(id).lean()) as
-      | { _id: string; title: string; description?: string; sopContent: string }
-      | null;
+    const module = await getModuleById(id);
 
     if (!module) {
       return NextResponse.json({ error: "Module not found." }, { status: 404 });
@@ -32,11 +34,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
 
     const questions = await generateQuizFromSop(module.sopContent);
 
-    const quiz = await Quiz.findOneAndUpdate(
-      { moduleId: id },
-      { moduleId: id, questions },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
-    ).lean();
+    const quiz = await upsertQuiz(id, questions);
 
     return NextResponse.json({ quiz });
   } catch (error) {

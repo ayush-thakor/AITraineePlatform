@@ -31,9 +31,18 @@ type QuizResult = {
 type QuizPanelProps = {
   moduleId: string;
   moduleTitle: string;
+  currentUserName: string;
+  canManageQuiz?: boolean;
+  canSubmit?: boolean;
 };
 
-export function QuizPanel({ moduleId, moduleTitle }: QuizPanelProps) {
+export function QuizPanel({
+  moduleId,
+  moduleTitle,
+  currentUserName,
+  canManageQuiz = false,
+  canSubmit = true
+}: QuizPanelProps) {
   const [quiz, setQuiz] = useState<QuizQuestion[]>([]);
   const [answers, setAnswers] = useState<number[]>([]);
   const [result, setResult] = useState<QuizResult | null>(null);
@@ -64,6 +73,10 @@ export function QuizPanel({ moduleId, moduleTitle }: QuizPanelProps) {
   }, [moduleId]);
 
   async function handleGenerate() {
+    if (!canManageQuiz) {
+      return;
+    }
+
     setIsGenerating(true);
     setError("");
 
@@ -86,6 +99,10 @@ export function QuizPanel({ moduleId, moduleTitle }: QuizPanelProps) {
   }
 
   async function handleSubmit() {
+    if (!canSubmit) {
+      return;
+    }
+
     setIsSubmitting(true);
     setError("");
 
@@ -95,8 +112,7 @@ export function QuizPanel({ moduleId, moduleTitle }: QuizPanelProps) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            answers,
-            traineeName: "Guest Trainee"
+            answers
           })
         })
       );
@@ -115,16 +131,20 @@ export function QuizPanel({ moduleId, moduleTitle }: QuizPanelProps) {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-base font-semibold text-slate-900">{moduleTitle} quiz</h2>
-            <p className="mt-1 text-sm text-slate-600">Five practical MCQs generated from the saved SOP.</p>
+            <p className="mt-1 text-sm text-slate-600">
+              Five practical MCQs generated from the saved SOP for {currentUserName}.
+            </p>
           </div>
-          <button
-            type="button"
-            onClick={handleGenerate}
-            disabled={isGenerating}
-            className="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-          >
-            {isGenerating ? "Generating..." : quiz.length ? "Regenerate quiz" : "Generate quiz"}
-          </button>
+          {canManageQuiz ? (
+            <button
+              type="button"
+              onClick={handleGenerate}
+              disabled={isGenerating}
+              className="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+            >
+              {isGenerating ? "Generating..." : quiz.length ? "Regenerate quiz" : "Generate quiz"}
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -148,6 +168,7 @@ export function QuizPanel({ moduleId, moduleTitle }: QuizPanelProps) {
                       type="radio"
                       name={`question-${index}`}
                       checked={answers[index] === optionIndex}
+                      disabled={!canSubmit}
                       onChange={() => {
                         const nextAnswers = [...answers];
                         nextAnswers[index] = optionIndex;
@@ -162,18 +183,24 @@ export function QuizPanel({ moduleId, moduleTitle }: QuizPanelProps) {
             </div>
           ))}
 
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isSubmitting || answers.includes(-1)}
-            className="inline-flex h-10 items-center justify-center rounded-md bg-emerald-600 px-4 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-emerald-300"
-          >
-            {isSubmitting ? "Scoring..." : "Submit quiz"}
-          </button>
+          {canSubmit ? (
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isSubmitting || answers.includes(-1)}
+              className="inline-flex h-10 items-center justify-center rounded-md bg-emerald-600 px-4 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-emerald-300"
+            >
+              {isSubmitting ? "Scoring..." : "Submit quiz"}
+            </button>
+          ) : (
+            <p className="text-sm text-slate-600">Uploader preview mode. Trainees and managers submit quiz attempts.</p>
+          )}
         </div>
       ) : !isLoading ? (
         <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600">
-          No quiz found yet. Generate one from the module SOP.
+          {canManageQuiz
+            ? "No quiz found yet. Generate one from the module SOP."
+            : "No quiz found yet. Ask a content uploader or manager to generate one from the module SOP."}
         </div>
       ) : null}
 
