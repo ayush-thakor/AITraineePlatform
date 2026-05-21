@@ -81,7 +81,7 @@ npm run dev
 | --- | --- | --- |
 | Trainee | `trainee@example.com` | `trainee123` |
 | Content Uploader | `uploader@example.com` | `uploader123` |
-| Manager | `manager@example.com` | `manager123` |
+| Manager | `ayushthakor1313@gmail.com` | `manager123` |
 
 ## Core workflow
 

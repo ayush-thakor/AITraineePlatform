@@ -32,8 +32,11 @@ export default function EscalationMailer() {
       }
 
       const deliveryNote = result.deliveryMessage ? ` ${result.deliveryMessage}` : "";
+      const overdueNames = Array.isArray(result.overdueNames) && result.overdueNames.length
+        ? ` Names: ${result.overdueNames.join(", ")}.`
+        : " Names: none.";
       setStatus(
-        `${result.message} Recipient: ${result.recipient}. ${result.overdueCount} overdue trainee(s), ${result.scoresAfterDeadlineCount} score updates after deadline.${deliveryNote}`
+        `${result.message} Recipient: ${result.recipient}. ${result.overdueCount} trainee(s) with no passed attempts by the deadline.${overdueNames} ${result.scoresAfterDeadlineCount} score updates after deadline.${deliveryNote}`
       );
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "An error occurred.");
@@ -48,7 +51,7 @@ export default function EscalationMailer() {
         <div>
           <h2 className="text-base font-semibold text-slate-900">Send deadline escalation</h2>
           <p className="text-sm text-slate-500">
-            Create a manager escalation email for trainees who did not complete their training by the selected deadline.
+            Create a manager escalation email for trainees who have no passed quiz attempts by the selected deadline.
           </p>
         </div>
       </div>

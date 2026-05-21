@@ -38,7 +38,7 @@ export const DEMO_USERS: DemoUser[] = [
   {
     id: "manager-demo",
     name: "Training Manager",
-    email: "manager@example.com",
+    email: "ayushthakor1313@gmail.com",
     password: "manager123",
     role: "manager",
     description: "Uploads content and reviews trainee quiz progress."

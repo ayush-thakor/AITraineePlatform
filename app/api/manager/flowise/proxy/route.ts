@@ -50,6 +50,7 @@ export async function POST(request: Request, _context: RouteContext) {
       recipient: email.delivery?.recipient ?? email.recipient,
       subject: email.subject,
       overdueCount: email.overdueTrainees.length,
+      overdueNames: email.overdueTrainees.map((trainee) => trainee.name),
       scoresAfterDeadlineCount: email.scoresAfterDeadline.length,
       deliveryStatus,
       deliveryMessage: email.delivery?.message

@@ -15,6 +15,8 @@ export type EscalationEmailSummary = {
     name: string;
     completedModules: number;
     totalModules: number;
+    attempts: number;
+    passedAttemptsByDeadline: number;
     latestScore?: number;
     latestPassed?: boolean;
     lastAttemptedAt?: string;
@@ -44,6 +46,15 @@ function getLatestScoreForTrainee(trainee: TraineeRecord) {
   return scores.length ? scores[scores.length - 1] : null;
 }
 
+function wasAttemptedByDeadline(attemptedAt: string | Date | undefined, deadline: Date) {
+  if (!attemptedAt) {
+    return true;
+  }
+
+  const attemptedDate = new Date(attemptedAt);
+  return !Number.isNaN(attemptedDate.getTime()) && attemptedDate.getTime() <= deadline.getTime();
+}
+
 export async function buildEscalationEmail(deadline: Date): Promise<EscalationEmailSummary> {
   const [modules, trainees] = await Promise.all([listModules(), listTrainees()]);
   const totalModules = modules.length;
@@ -53,18 +64,24 @@ export async function buildEscalationEmail(deadline: Date): Promise<EscalationEm
   const overdueTrainees = trainees
     .map((trainee) => {
       const completedModules = trainee.completedModules?.length ?? 0;
+      const scores = trainee.scores ?? [];
+      const passedAttemptsByDeadline = scores.filter(
+        (score) => score.passed && wasAttemptedByDeadline(score.attemptedAt, deadline)
+      ).length;
       const latest = getLatestScoreForTrainee(trainee);
       const lastAttemptDate = latest?.attemptedAt ? new Date(latest.attemptedAt) : null;
       return {
         name: trainee.name,
         completedModules,
         totalModules,
+        attempts: scores.length,
+        passedAttemptsByDeadline,
         latestScore: latest?.score,
         latestPassed: latest?.passed,
         lastAttemptedAt: lastAttemptDate ? formatDate(lastAttemptDate) : undefined
       };
     })
-    .filter((record) => record.completedModules < totalModules);
+    .filter((record) => record.passedAttemptsByDeadline === 0);
 
   const scoresAfterDeadline = trainees.flatMap((trainee) =>
     (trainee.scores ?? [])
@@ -90,19 +107,19 @@ export async function buildEscalationEmail(deadline: Date): Promise<EscalationEm
     "",
     `This escalation report is based on the deadline ${formatDate(deadline)}.`,
     "",
-    `Trainees who have not completed all available modules by the deadline:`,
+    `Trainees with no passed quiz attempts by the deadline: ${overdueTrainees.length}`,
     "",
-    ...overdueTrainees.map((trainee) => {
+    ...(overdueTrainees.length ? overdueTrainees.map((trainee) => {
       const scoreText = trainee.latestScore !== undefined ? `Latest score ${trainee.latestScore}% (${trainee.latestPassed ? "Pass" : "Needs retry"})` : "No quiz score yet";
       const attemptedText = trainee.lastAttemptedAt ? `Last attempt: ${trainee.lastAttemptedAt}` : "No attempts yet";
-      return `- ${trainee.name}: ${trainee.completedModules}/${trainee.totalModules} completed. ${scoreText}. ${attemptedText}.`;
-    }),
+      return `- ${trainee.name}: ${trainee.attempts} attempt(s), ${trainee.passedAttemptsByDeadline} passed by deadline. ${scoreText}. ${attemptedText}.`;
+    }) : ["- None"]),
     "",
     `Scores recorded after the deadline (${formatDate(deadline)}):`,
     "",
-    ...scoresAfterDeadline.map((item) =>
+    ...(scoresAfterDeadline.length ? scoresAfterDeadline.map((item) =>
       `- ${item.name}: ${item.moduleTitle} - ${item.score}% (${item.passed ? "Pass" : "Needs retry"}) at ${item.attemptedAt}`
-    ),
+    ) : ["- None"]),
     "",
     "Please review these trainees and follow up as needed.",
     "",
