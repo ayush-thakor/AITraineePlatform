@@ -44,7 +44,7 @@ Flowise import may accept the JSON but still fail to render because it expects n
 - Node type: `HTTP Request`
 - Name: `List Trainees`
 - Method: `GET`
-- URL: `http://localhost:3001/api/manager/trainees`
+- URL: `http://localhost:3005/api/manager/trainees`
 - Headers:
   - `x-api-key: {{FLOWISE_PROXY_KEY}}`
 - Output variable: `trainees`
@@ -82,7 +82,7 @@ Flowise import may accept the JSON but still fail to render because it expects n
 - Node type: `HTTP Request`
 - Name: `Send Escalation (POST)`
 - Method: `POST`
-- URL: `http://localhost:3001/api/manager/flowise/proxy`
+- URL: `http://localhost:3005/api/manager/flowise/proxy`
 - Headers:
   - `Content-Type: application/json`
   - `x-api-key: {{FLOWISE_PROXY_KEY}}`

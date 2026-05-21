@@ -31,8 +31,9 @@ export default function EscalationMailer() {
         throw new Error(result.error || "Could not send escalation email.");
       }
 
+      const deliveryNote = result.deliveryMessage ? ` ${result.deliveryMessage}` : "";
       setStatus(
-        `Escalation email prepared for ${result.recipient}. ${result.overdueCount} overdue trainee(s), ${result.scoresAfterDeadlineCount} score updates after deadline.`
+        `${result.message} Recipient: ${result.recipient}. ${result.overdueCount} overdue trainee(s), ${result.scoresAfterDeadlineCount} score updates after deadline.${deliveryNote}`
       );
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "An error occurred.");

@@ -3,7 +3,7 @@ param(
   [int]$FlowPort = 3000,
   [string]$FlowHost = 'localhost',
   [string]$ProxyKey = '8b7f6c9f2d4e1a3b5c7d0e8f9a1b2c3d',
-  [string]$AllowList = 'localhost,127.0.0.1,host.docker.internal,localhost:3001'
+  [string]$AllowList = 'localhost,127.0.0.1,host.docker.internal,localhost:3005'
 )
 
 Set-Location -Path (Split-Path -Path $MyInvocation.MyCommand.Definition -Parent)

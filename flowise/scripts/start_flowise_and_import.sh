@@ -7,7 +7,7 @@ FLOWISE_PORT=${FLOWISE_PORT:-3000}
 FLOWISE_HOST=${FLOWISE_HOST:-localhost}
 FLOWISE_UI_URL="http://${FLOWISE_HOST}:${FLOWISE_PORT}"
 FLOWISE_PROXY_KEY=${FLOWISE_PROXY_KEY:-8b7f6c9f2d4e1a3b5c7d0e8f9a1b2c3d}
-HTTP_ALLOW_LIST=${HTTP_ALLOW_LIST:-localhost,127.0.0.1,host.docker.internal,localhost:3001}
+HTTP_ALLOW_LIST=${HTTP_ALLOW_LIST:-localhost,127.0.0.1,host.docker.internal,localhost:3005}
 FLOW_JSON_PATH=${1:-"$(dirname "$0")/../agentic_flow_v2_native_docker.json"}
 
 echo "Using Flowise UI: $FLOWISE_UI_URL"

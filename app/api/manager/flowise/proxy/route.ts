@@ -41,13 +41,18 @@ export async function POST(request: Request, _context: RouteContext) {
     } as { subject?: string; body?: string };
 
     const email = await sendEscalationEmail(deadline, overrides);
+    const deliveryStatus = email.delivery?.status ?? "logged";
 
     return NextResponse.json({
-      message: "Escalation processed via proxy",
-      recipient: email.recipient,
+      message: deliveryStatus === "sent"
+        ? "Escalation email sent via proxy"
+        : "Escalation email prepared via proxy, but SMTP is not configured so it was logged instead of sent.",
+      recipient: email.delivery?.recipient ?? email.recipient,
       subject: email.subject,
       overdueCount: email.overdueTrainees.length,
-      scoresAfterDeadlineCount: email.scoresAfterDeadline.length
+      scoresAfterDeadlineCount: email.scoresAfterDeadline.length,
+      deliveryStatus,
+      deliveryMessage: email.delivery?.message
     });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });

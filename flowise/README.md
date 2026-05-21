@@ -67,13 +67,13 @@ npm exec -- next build
 npm start
 ```
 
-- The app is currently running on `http://localhost:3001`.
+- The app is currently running on `http://localhost:3005`.
 
 - In Flowise, run the flow and enter a manager instruction like:
 
 "Escalate trainees who haven't completed by 2026-05-25"
 
-- Confirm Flowise calls `http://localhost:3001/api/manager/flowise/proxy` and the app logs/sends the email.
+- Confirm Flowise calls `http://localhost:3005/api/manager/flowise/proxy` and the app logs/sends the email.
 
 Optional enhancements
 
@@ -85,7 +85,7 @@ Environment variables needed for Flowise integration:
 
 ```env
 FLOWISE_PROXY_KEY=your-secret-key
-ESCALATION_EMAIL_RECIPIENT=manager@example.com
+ESCALATION_EMAIL_RECIPIENT=ayushthakor1313@gmail.com
 ```
 
 Flowise HTTP allowlist (to permit calling localhost)
@@ -94,14 +94,14 @@ If Flowise shows "Access to this host is denied by policy." you must set the tar
 
 ```bash
 # Bash
-export HTTP_ALLOW_LIST=localhost,127.0.0.1,localhost:3001
+export HTTP_ALLOW_LIST=localhost,127.0.0.1,localhost:3005
 export FLOWISE_PROXY_KEY=your-secret-key
 npx flowise start
 ```
 
 ```powershell
 # PowerShell
-$env:HTTP_ALLOW_LIST='localhost,127.0.0.1,localhost:3001'
+$env:HTTP_ALLOW_LIST='localhost,127.0.0.1,localhost:3005'
 $env:FLOWISE_PROXY_KEY='your-secret-key'
 npx flowise start
 ```
@@ -120,7 +120,7 @@ Once Flowise is running, import the flow or use the helper script to import it a
 
 - Docker: containers treat `localhost` as the container itself. Use `host.docker.internal` in your Flowise HTTP node URLs, or run Flowise with `--network=host` (Linux) so `localhost` refers to the host. Example options:
 
-1) Change the HTTP node URLs to `http://host.docker.internal:3004/...` (a Docker-friendly flow copy is provided as `agentic_flow_v2_native_docker.json`).
+1) Change the HTTP node URLs to `http://host.docker.internal:3005/...` (a Docker-friendly flow copy is provided as `agentic_flow_v2_native_docker.json`).
 
 2) Run Flowise Docker with host networking (Linux):
 
@@ -143,9 +143,11 @@ SMTP_USER=you@example.com
 SMTP_PASS=your-smtp-pass
 SMTP_SECURE=false
 MAIL_FROM=you@example.com
+SMTP_TLS_REJECT_UNAUTHORIZED=true
 ```
+
+If local SMTP fails with `self-signed certificate in certificate chain`, prefer fixing the trusted certificate chain. For local testing only, set `SMTP_TLS_REJECT_UNAUTHORIZED=false` and restart the app.
 
 If you want, I can:
 - Generate a fully-valid Flowise JSON matching the exact Flowise schema (I will need to know your Flowise version), or
 - Add a helper endpoint `/api/manager/flowise/proxy` that accepts an API key and runs the escalation so Flowise can call a single-key-protected route.
-

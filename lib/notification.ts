@@ -6,6 +6,11 @@ export type EscalationEmailSummary = {
   recipient: string;
   subject: string;
   body: string;
+  delivery?: {
+    status: "sent" | "logged";
+    recipient: string;
+    message: string;
+  };
   overdueTrainees: Array<{
     name: string;
     completedModules: number;
@@ -42,7 +47,7 @@ function getLatestScoreForTrainee(trainee: TraineeRecord) {
 export async function buildEscalationEmail(deadline: Date): Promise<EscalationEmailSummary> {
   const [modules, trainees] = await Promise.all([listModules(), listTrainees()]);
   const totalModules = modules.length;
-  const recipient = process.env.ESCALATION_EMAIL_RECIPIENT || "manager@example.com";
+  const recipient = process.env.ESCALATION_EMAIL_RECIPIENT || "ayushthakor1313@gmail.com";
   const subject = `Training deadline escalation report for ${formatDate(deadline)}`;
 
   const overdueTrainees = trainees
@@ -123,33 +128,66 @@ async function deliverEmail(email: EscalationEmailSummary) {
   const smtpPass = process.env.SMTP_PASS;
   const fromAddress = process.env.MAIL_FROM || smtpUser || "no-reply@example.com";
   const toAddress = process.env.ESCALATION_EMAIL_RECIPIENT || email.recipient;
+  const rejectUnauthorized = process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== "false";
 
   if (smtpHost && smtpPort && smtpUser && smtpPass) {
     const transporter = nodemailer.createTransport({
       host: smtpHost,
       port: smtpPort,
       secure: process.env.SMTP_SECURE === "true",
+      tls: {
+        rejectUnauthorized
+      },
       auth: {
         user: smtpUser,
         pass: smtpPass
       }
     });
 
-    await transporter.sendMail({
-      from: fromAddress,
-      to: toAddress,
-      subject: email.subject,
-      text: email.body
-    });
+    try {
+      await transporter.sendMail({
+        from: fromAddress,
+        to: toAddress,
+        subject: email.subject,
+        text: email.body
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+
+      if (message.toLowerCase().includes("self-signed certificate")) {
+        throw new Error(
+          `${message}. For local testing with a self-signed SMTP certificate chain, set SMTP_TLS_REJECT_UNAUTHORIZED=false and restart the app.`
+        );
+      }
+
+      throw error;
+    }
 
     console.info("[Escalation email] Sent email to", toAddress);
-    return;
+    return {
+      status: "sent" as const,
+      recipient: toAddress,
+      message: "Email sent via SMTP."
+    };
   }
+
+  const missingConfig = [
+    !smtpHost ? "SMTP_HOST" : null,
+    !smtpPort ? "SMTP_PORT" : null,
+    !smtpUser ? "SMTP_USER" : null,
+    !smtpPass ? "SMTP_PASS" : null
+  ].filter(Boolean);
 
   console.info("[Escalation email] SMTP not configured; logging email instead.");
   console.info("[Escalation email] Recipient:", toAddress);
   console.info("[Escalation email] Subject:", email.subject);
   console.info("[Escalation email] Body:\n" + email.body);
+
+  return {
+    status: "logged" as const,
+    recipient: toAddress,
+    message: `SMTP is missing ${missingConfig.join(", ")}; escalation email was logged instead of sent.`
+  };
 }
 
 export async function sendEscalationEmail(
@@ -166,6 +204,6 @@ export async function sendEscalationEmail(
     email.body = overrides.body;
   }
 
-  await deliverEmail(email);
+  email.delivery = await deliverEmail(email);
   return email;
 }

@@ -29,13 +29,18 @@ export async function POST(request: Request, _context: RouteContext) {
     }
 
     const email = await sendEscalationEmail(deadline);
+    const deliveryStatus = email.delivery?.status ?? "logged";
 
     return NextResponse.json({
-      message: "Escalation email has been prepared.",
-      recipient: email.recipient,
+      message: deliveryStatus === "sent"
+        ? "Escalation email has been sent."
+        : "Escalation email has been prepared, but SMTP is not configured so it was logged instead of sent.",
+      recipient: email.delivery?.recipient ?? email.recipient,
       subject: email.subject,
       overdueCount: email.overdueTrainees.length,
       scoresAfterDeadlineCount: email.scoresAfterDeadline.length,
+      deliveryStatus,
+      deliveryMessage: email.delivery?.message,
       bodyPreview: email.body.slice(0, 200) + (email.body.length > 200 ? "..." : "")
     });
   } catch (error) {
