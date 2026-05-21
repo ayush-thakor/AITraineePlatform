@@ -1,0 +1,383 @@
+{
+  "nodes": [
+    {
+      "id": "start_node",
+      "position": { "x": 50, "y": 100 },
+      "type": "agentFlow",
+      "data": {
+        "id": "start_node_id",
+        "label": "Escalation Trigger",
+        "version": "1.0",
+        "name": "startAgentflow",
+        "type": "string",
+        "color": "#7EE787",
+        "hideOutput": false,
+        "hideInput": true,
+        "baseClasses": ["string"],
+        "tags": ["trigger"],
+        "category": "Agent Flows",
+        "description": "Triggers escalation workflow when deadline is reached",
+        "inputParams": [
+          {
+            "label": "Start Input Type",
+            "name": "startInputType",
+            "type": "options",
+            "options": [
+              { "label": "Manual Input", "name": "manual" },
+              { "label": "Schedule Input", "name": "scheduleInput" },
+              { "label": "Webhook", "name": "webhookTrigger" }
+            ],
+            "default": "manual"
+          }
+        ],
+        "inputAnchors": [],
+        "inputs": { "startInputType": "manual" },
+        "outputAnchors": [
+          {
+            "id": "start_node_id-output-default-string",
+            "label": "Default Output",
+            "name": "default",
+            "type": "string"
+          }
+        ],
+        "outputs": {},
+        "selected": false
+      }
+    },
+    {
+      "id": "fetch_trainees_node",
+      "position": { "x": 250, "y": 100 },
+      "type": "agentFlow",
+      "data": {
+        "id": "fetch_trainees_node_id",
+        "label": "Fetch Trainees Data",
+        "version": "1.0",
+        "name": "httpAgentflow",
+        "type": "string",
+        "color": "#FF7F7F",
+        "hideOutput": false,
+        "hideInput": false,
+        "baseClasses": ["string"],
+        "tags": ["api"],
+        "category": "Agent Flows",
+        "description": "Fetches trainee completion data from API endpoint",
+        "inputParams": [
+          {
+            "label": "URL",
+            "name": "url",
+            "type": "string",
+            "default": "http://127.0.0.1:3001/api/manager/trainees"
+          },
+          {
+            "label": "Method",
+            "name": "method",
+            "type": "options",
+            "options": [
+              { "label": "GET", "name": "GET" },
+              { "label": "POST", "name": "POST" }
+            ],
+            "default": "GET"
+          },
+          {
+            "label": "Headers",
+            "name": "headers",
+            "type": "json",
+            "default": "{\"Content-Type\": \"application/json\", \"x-api-key\": \"{{FLOWISE_PROXY_KEY}}\"}"
+          }
+        ],
+        "inputAnchors": [],
+        "inputs": {
+          "url": "http://127.0.0.1:3001/api/manager/trainees",
+          "method": "GET",
+          "headers": "{\"Content-Type\": \"application/json\", \"x-api-key\": \"{{FLOWISE_PROXY_KEY}}\"}"
+        },
+        "outputAnchors": [
+          {
+            "id": "fetch_trainees_node_id-output-response-string",
+            "label": "Response",
+            "name": "response",
+            "type": "string"
+          }
+        ],
+        "outputs": {},
+        "selected": false
+      }
+    },
+    {
+      "id": "check_incomplete_node",
+      "position": { "x": 450, "y": 100 },
+      "type": "agentFlow",
+      "data": {
+        "id": "check_incomplete_node_id",
+        "label": "Check Incomplete Trainees",
+        "version": "1.0",
+        "name": "conditionAgentflow",
+        "type": "string",
+        "color": "#FFB938",
+        "hideOutput": false,
+        "hideInput": false,
+        "baseClasses": ["string"],
+        "tags": ["logic"],
+        "category": "Agent Flows",
+        "description": "Routes based on whether incomplete trainees exist",
+        "inputParams": [
+          {
+            "label": "Condition Function",
+            "name": "conditionFunction",
+            "type": "conditionFunction",
+            "default": "return input.incomplete && input.incomplete.length > 0"
+          }
+        ],
+        "inputAnchors": [
+          {
+            "id": "check_incomplete_node_id-input-data-string",
+            "label": "Data Input",
+            "name": "data",
+            "type": "string"
+          }
+        ],
+        "inputs": {
+          "conditionFunction": "return input.incomplete && input.incomplete.length > 0"
+        },
+        "outputAnchors": [
+          {
+            "id": "check_incomplete_node_id-output-true-string",
+            "label": "True",
+            "name": "true",
+            "type": "string",
+            "options": [
+              { "id": "0", "label": "True Path" },
+              { "id": "1", "label": "False Path" }
+            ]
+          }
+        ],
+        "outputs": {},
+        "selected": false
+      }
+    },
+    {
+      "id": "prepare_escalation_node",
+      "position": { "x": 650, "y": 50 },
+      "type": "agentFlow",
+      "data": {
+        "id": "prepare_escalation_node_id",
+        "label": "Prepare Escalation Data",
+        "version": "1.0",
+        "name": "customFunctionAgentflow",
+        "type": "string",
+        "color": "#E4B7FF",
+        "hideOutput": false,
+        "hideInput": false,
+        "baseClasses": ["string"],
+        "tags": ["transform"],
+        "category": "Agent Flows",
+        "description": "Formats trainee data for escalation email",
+        "inputParams": [
+          {
+            "label": "Custom Code",
+            "name": "customCode",
+            "type": "code",
+            "default": "const data = JSON.parse(input);\nreturn {\n  incompleteTrainees: data.incomplete || [],\n  totalIncomplete: (data.incomplete || []).length,\n  timestamp: new Date().toISOString()\n};"
+          }
+        ],
+        "inputAnchors": [
+          {
+            "id": "prepare_escalation_node_id-input-data-string",
+            "label": "Input Data",
+            "name": "data",
+            "type": "string"
+          }
+        ],
+        "inputs": {
+          "customCode": "const data = JSON.parse(input);\nreturn {\n  incompleteTrainees: data.incomplete || [],\n  totalIncomplete: (data.incomplete || []).length,\n  timestamp: new Date().toISOString()\n};"
+        },
+        "outputAnchors": [
+          {
+            "id": "prepare_escalation_node_id-output-result-string",
+            "label": "Prepared Data",
+            "name": "result",
+            "type": "string"
+          }
+        ],
+        "outputs": {},
+        "selected": false
+      }
+    },
+    {
+      "id": "send_escalation_node",
+      "position": { "x": 850, "y": 50 },
+      "type": "agentFlow",
+      "data": {
+        "id": "send_escalation_node_id",
+        "label": "Send Escalation",
+        "version": "1.0",
+        "name": "httpAgentflow",
+        "type": "string",
+        "color": "#FF7F7F",
+        "hideOutput": false,
+        "hideInput": false,
+        "baseClasses": ["string"],
+        "tags": ["api"],
+        "category": "Agent Flows",
+        "description": "Sends escalation request to app endpoint",
+        "inputParams": [
+          {
+            "label": "URL",
+            "name": "url",
+            "type": "string",
+            "default": "http://127.0.0.1:3001/api/manager/flowise/proxy"
+          },
+          {
+            "label": "Method",
+            "name": "method",
+            "type": "options",
+            "options": [
+              { "label": "GET", "name": "GET" },
+              { "label": "POST", "name": "POST" }
+            ],
+            "default": "POST"
+          },
+          {
+            "label": "Headers",
+            "name": "headers",
+            "type": "json",
+            "default": "{\"Content-Type\": \"application/json\", \"x-api-key\": \"{{FLOWISE_PROXY_KEY}}\"}"
+          }
+        ],
+        "inputAnchors": [
+          {
+            "id": "send_escalation_node_id-input-data-string",
+            "label": "Escalation Data",
+            "name": "data",
+            "type": "string"
+          }
+        ],
+        "inputs": {
+          "url": "http://127.0.0.1:3001/api/manager/flowise/proxy",
+          "method": "POST",
+          "headers": "{\"Content-Type\": \"application/json\", \"x-api-key\": \"{{FLOWISE_PROXY_KEY}}\"}"
+        },
+        "outputAnchors": [
+          {
+            "id": "send_escalation_node_id-output-response-string",
+            "label": "Response",
+            "name": "response",
+            "type": "string"
+          }
+        ],
+        "outputs": {},
+        "selected": false
+      }
+    },
+    {
+      "id": "no_action_node",
+      "position": { "x": 650, "y": 200 },
+      "type": "agentFlow",
+      "data": {
+        "id": "no_action_node_id",
+        "label": "No Action (All Complete)",
+        "version": "1.0",
+        "name": "directReplyAgentflow",
+        "type": "string",
+        "color": "#4DDBBB",
+        "hideOutput": false,
+        "hideInput": false,
+        "baseClasses": ["string"],
+        "tags": ["end"],
+        "category": "Agent Flows",
+        "description": "Returns message when all trainees are complete",
+        "inputParams": [
+          {
+            "label": "Message",
+            "name": "message",
+            "type": "string",
+            "default": "All trainees have completed their training. No escalation needed."
+          }
+        ],
+        "inputAnchors": [],
+        "inputs": {
+          "message": "All trainees have completed their training. No escalation needed."
+        },
+        "outputAnchors": [
+          {
+            "id": "no_action_node_id-output-reply-string",
+            "label": "Reply",
+            "name": "reply",
+            "type": "string"
+          }
+        ],
+        "outputs": {},
+        "selected": false
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "start_node-start_node_id-output-default-string-fetch_trainees_node-fetch_trainees_node_id-input-url-string",
+      "source": "start_node",
+      "target": "fetch_trainees_node",
+      "sourceHandle": "start_node_id-output-default-string",
+      "targetHandle": "fetch_trainees_node_id-input-url-string",
+      "data": {
+        "sourceColor": "#7EE787",
+        "targetColor": "#FF7F7F"
+      },
+      "type": "agentFlow"
+    },
+    {
+      "id": "fetch_trainees_node-fetch_trainees_node_id-output-response-string-check_incomplete_node-check_incomplete_node_id-input-data-string",
+      "source": "fetch_trainees_node",
+      "target": "check_incomplete_node",
+      "sourceHandle": "fetch_trainees_node_id-output-response-string",
+      "targetHandle": "check_incomplete_node_id-input-data-string",
+      "data": {
+        "sourceColor": "#FF7F7F",
+        "targetColor": "#FFB938"
+      },
+      "type": "agentFlow"
+    },
+    {
+      "id": "check_incomplete_node-check_incomplete_node_id-output-true-string-0-prepare_escalation_node-prepare_escalation_node_id-input-data-string",
+      "source": "check_incomplete_node",
+      "target": "prepare_escalation_node",
+      "sourceHandle": "check_incomplete_node_id-output-true-string-0",
+      "targetHandle": "prepare_escalation_node_id-input-data-string",
+      "data": {
+        "sourceColor": "#FFB938",
+        "targetColor": "#E4B7FF",
+        "edgeLabel": "0"
+      },
+      "type": "agentFlow"
+    },
+    {
+      "id": "check_incomplete_node-check_incomplete_node_id-output-true-string-1-no_action_node-no_action_node_id-input-message-string",
+      "source": "check_incomplete_node",
+      "target": "no_action_node",
+      "sourceHandle": "check_incomplete_node_id-output-true-string-1",
+      "targetHandle": "no_action_node_id-input-message-string",
+      "data": {
+        "sourceColor": "#FFB938",
+        "targetColor": "#4DDBBB",
+        "edgeLabel": "1"
+      },
+      "type": "agentFlow"
+    },
+    {
+      "id": "prepare_escalation_node-prepare_escalation_node_id-output-result-string-send_escalation_node-send_escalation_node_id-input-data-string",
+      "source": "prepare_escalation_node",
+      "target": "send_escalation_node",
+      "sourceHandle": "prepare_escalation_node_id-output-result-string",
+      "targetHandle": "send_escalation_node_id-input-data-string",
+      "data": {
+        "sourceColor": "#E4B7FF",
+        "targetColor": "#FF7F7F"
+      },
+      "type": "agentFlow"
+    }
+  ],
+  "viewport": {
+    "x": 0,
+    "y": 0,
+    "zoom": 1
+  }
+}

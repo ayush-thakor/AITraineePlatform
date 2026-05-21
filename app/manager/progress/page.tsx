@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/PageHeader";
+import EscalationMailer from "@/components/EscalationMailer";
 import { requireRole } from "@/lib/auth";
 import { listModules, listTrainees } from "@/lib/dataStore";
 import { MANAGER_ROLES } from "@/lib/users";
@@ -99,6 +100,8 @@ export default async function ManagerProgressPage() {
           <p className="mt-2 text-2xl font-semibold text-slate-900">{passRate}%</p>
         </div>
       </div>
+
+      <EscalationMailer />
 
       <section className="mb-8 rounded-lg border border-slate-200 bg-white">
         <div className="border-b border-slate-200 px-5 py-4">

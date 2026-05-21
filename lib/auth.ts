@@ -2,13 +2,8 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
-import {
-  DEMO_USERS,
-  getRoleHome,
-  getUserById,
-  type AuthUser,
-  type UserRole
-} from "@/lib/users";
+import { getRoleHome, type AuthUser, type UserRole } from "@/lib/users";
+import { authenticateUser as authenticateUserCredentials, getUserById as getStoredUserById } from "@/lib/userStore";
 
 const AUTH_COOKIE_NAME = "ai-trainee-session";
 const SESSION_SECONDS = 60 * 60 * 8;
@@ -68,22 +63,8 @@ function decodeSession(value?: string): SessionPayload | null {
   }
 }
 
-export function authenticateUser(email: string, password: string): AuthUser | null {
-  const normalizedEmail = email.trim().toLowerCase();
-  const user = DEMO_USERS.find(
-    (item) => item.email.toLowerCase() === normalizedEmail && item.password === password
-  );
-
-  if (!user) {
-    return null;
-  }
-
-  return {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role
-  };
+export async function authenticateUser(email: string, password: string): Promise<AuthUser | null> {
+  return await authenticateUserCredentials(email, password);
 }
 
 export async function getCurrentUser(): Promise<AuthUser | null> {
@@ -94,7 +75,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     return null;
   }
 
-  const user = getUserById(payload.userId);
+  const user = await getStoredUserById(payload.userId);
 
   if (!user || user.role !== payload.role) {
     return null;

@@ -1,0 +1,143 @@
+{
+  "version": "1.0",
+  "name": "Manager Escalation - Deadline Email",
+  "description": "Flowise flow to parse a manager instruction, collect overdue trainees by deadline, build an escalation email, and trigger the app API to send it.",
+  "nodes": [
+    {
+      "id": "manager_input",
+      "type": "input",
+      "name": "Manager Instruction",
+      "position": { "x": 100, "y": 80 },
+      "data": {
+        "title": "Manager Instruction",
+        "placeholder": "Example: Escalate trainees who haven't completed by 2026-05-25",
+        "outputVar": "user_input"
+      }
+    },
+    {
+      "id": "parse_deadline",
+      "type": "custom",
+      "name": "Parse Deadline",
+      "position": { "x": 420, "y": 80 },
+      "data": {
+        "model": "gpt-4o-mini",
+        "temperature": 0,
+        "system": "Extract an ISO date (YYYY-MM-DD) from the manager instruction. Return JSON: {\"deadline\":\"YYYY-MM-DD\"|null, \"notes\":\"...\"}. If no date found, set deadline to null.",
+        "input": "{{user_input}}",
+        "outputVar": "parsed"
+      }
+    },
+    {
+      "id": "deadline_check",
+      "type": "switch",
+      "name": "Deadline Present?",
+      "position": { "x": 740, "y": 80 },
+      "data": {
+        "expression": "parsed.deadline != null",
+        "outputVar": "has_deadline"
+      }
+    },
+    {
+      "id": "ask_for_date",
+      "type": "input",
+      "name": "Ask For Deadline",
+      "position": { "x": 420, "y": 260 },
+      "data": {
+        "title": "Please provide a deadline",
+        "placeholder": "Enter deadline (YYYY-MM-DD)",
+        "outputVar": "user_deadline"
+      }
+    },
+    {
+      "id": "list_trainees",
+      "type": "http",
+      "name": "List Trainees",
+      "position": { "x": 1060, "y": 80 },
+      "data": {
+        "method": "GET",
+        "url": "http://localhost:3001/api/manager/trainees",
+        "headers": {
+          "x-api-key": "{{FLOWISE_PROXY_KEY}}"
+        },
+        "outputVar": "trainees",
+        "notes": "If this route is not present, create `/api/manager/trainees` that returns JSON array of trainees with completedModules and scores with timestamps. For dev testing you may call /api/modules and adapt the evaluate node."
+      }
+    },
+    {
+      "id": "evaluate_overdue",
+      "type": "custom",
+      "name": "Evaluate Overdue & Scores",
+      "position": { "x": 1300, "y": 80 },
+      "data": {
+        "model": "gpt-4o-mini",
+        "temperature": 0,
+        "system": "Given a list of trainees and a deadline, identify trainees not completed by the deadline and list any scores submitted after the deadline. Return JSON: {\"overdueTrainees\": [...], \"scoresAfterDeadline\": [...] }",
+        "input": "{\n  \"deadline\": {{#if parsed.deadline}}\"{{parsed.deadline}}\"{{else}}\"{{user_deadline}}\"{{/if}},\n  \"trainees\": {{trainees}}\n}",
+        "outputVar": "evaluation"
+      }
+    },
+    {
+      "id": "build_email",
+      "type": "custom",
+      "name": "Build Escalation Email",
+      "position": { "x": 1600, "y": 80 },
+      "data": {
+        "model": "gpt-4o-mini",
+        "temperature": 0.2,
+        "system": "Compose a concise escalation email to the manager's manager with subject and body. Use the lists of overdue trainees and scores after deadline. Return JSON: {\"subject\": \"...\", \"body\": \"...\" }",
+        "input": "{\"deadline\": {{#if parsed.deadline}}\"{{parsed.deadline}}\"{{else}}\"{{user_deadline}}\"{{/if}}, \"parsedNotes\": \"{{parsed.notes}}\", \"evaluation\": {{evaluation}}}",
+        "outputVar": "email"
+      }
+    },
+    {
+      "id": "send_escalation",
+      "type": "http",
+      "name": "Send Escalation (POST)",
+      "position": { "x": 1900, "y": 80 },
+      "data": {
+        "method": "POST",
+        "url": "http://localhost:3001/api/manager/flowise/proxy",
+        "headers": {
+          "Content-Type": "application/json",
+          "x-api-key": "{{FLOWISE_PROXY_KEY}}"
+        },
+        "body": {
+          "deadline": "{{#if parsed.deadline}}{{parsed.deadline}}{{else}}{{user_deadline}}{{/if}}",
+          "subject": "{{email.subject}}",
+          "body": "{{email.body}}",
+          "notes": "{{parsed.notes}}"
+        },
+        "outputVar": "send_response",
+        "notes": "This endpoint accepts the flowise proxy API key. Set `FLOWISE_PROXY_KEY` in Flowise environment."
+      }
+    },
+    {
+      "id": "final_report",
+      "type": "output",
+      "name": "Report Back",
+      "position": { "x": 2200, "y": 80 },
+      "data": {
+        "template": "Escalation sent. Summary:\nOverdue trainees: {{evaluation.overdueTrainees.length}}\nScores after deadline: {{evaluation.scoresAfterDeadline.length}}\nAPI response: {{send_response}}",
+        "outputVar": "report"
+      }
+    }
+  ],
+  "edges": [
+    { "from": "manager_input", "to": "parse_deadline" },
+    { "from": "parse_deadline", "to": "deadline_check" },
+    { "from": "deadline_check", "to": "list_trainees", "condition": "true" },
+    { "from": "deadline_check", "to": "ask_for_date", "condition": "false" },
+    { "from": "ask_for_date", "to": "list_trainees" },
+    { "from": "list_trainees", "to": "evaluate_overdue" },
+    { "from": "evaluate_overdue", "to": "build_email" },
+    { "from": "build_email", "to": "send_escalation" },
+    { "from": "send_escalation", "to": "final_report" }
+  ],
+  "metadata": {
+    "notes": "Replace HTTP URLs with your deployed app URL. Provide FLOWISE_MANAGER_API_KEY in Flowise environment variables (or change Authorization header to use cookie/session).",
+    "recommended": [
+      "Add server endpoint: POST /api/manager/flowise/proxy that accepts a flowise API key and triggers the same logic server-side (safer than giving full manager account credentials to Flowise).",
+      "Add GET /api/manager/trainees that returns structured trainee progress for easier evaluation in Flowise."
+    ]
+  }
+}

@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { DEMO_USERS, ROLE_LABELS, type UserRole } from "@/lib/users";
+import { DEMO_USERS, ROLE_LABELS } from "@/lib/users";
 import { parseJsonResponse } from "@/utils/api";
 
 type LoginResponse = {
@@ -11,24 +12,10 @@ type LoginResponse = {
 
 export function LoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState(DEMO_USERS[0].email);
-  const [password, setPassword] = useState(DEMO_USERS[0].password);
-  const [selectedRole, setSelectedRole] = useState<UserRole>(DEMO_USERS[0].role);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
-
-  function selectDemoUser(role: UserRole) {
-    const user = DEMO_USERS.find((item) => item.role === role);
-
-    if (!user) {
-      return;
-    }
-
-    setSelectedRole(user.role);
-    setEmail(user.email);
-    setPassword(user.password);
-    setError("");
-  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,32 +47,8 @@ export function LoginForm() {
           <p className="text-sm font-medium text-slate-500">AI Trainee Platform</p>
           <h1 className="mt-2 text-2xl font-semibold text-slate-900">Sign in</h1>
           <p className="mt-2 max-w-2xl text-sm text-slate-600">
-            Choose a role to enter the right workspace for training, content upload, or management.
+            Sign in with your real email and password to access the training portal.
           </p>
-        </div>
-
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          {DEMO_USERS.map((user) => (
-            <button
-              key={user.id}
-              type="button"
-              onClick={() => selectDemoUser(user.role)}
-              className={`rounded-lg border px-4 py-3 text-left text-sm transition ${
-                selectedRole === user.role
-                  ? "border-slate-900 bg-slate-900 text-white"
-                  : "border-slate-200 bg-white text-slate-700 hover:border-slate-400"
-              }`}
-            >
-              <span className="block font-medium">{ROLE_LABELS[user.role]}</span>
-              <span
-                className={`mt-1 block text-xs ${
-                  selectedRole === user.role ? "text-slate-200" : "text-slate-500"
-                }`}
-              >
-                {user.description}
-              </span>
-            </button>
-          ))}
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -127,6 +90,10 @@ export function LoginForm() {
             {isSubmitting ? "Signing in..." : "Sign in"}
           </button>
         </form>
+
+        <p className="mt-4 text-sm text-slate-600">
+          Don’t have an account? <Link href="/register" className="font-semibold text-slate-900">Register here</Link>.
+        </p>
       </section>
 
       <aside className="rounded-lg border border-slate-200 bg-white p-5">

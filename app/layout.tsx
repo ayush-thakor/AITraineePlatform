@@ -12,7 +12,10 @@ export const metadata: Metadata = {
 
 function getNavItems(user: AuthUser | null) {
   if (!user) {
-    return [{ href: "/login", label: "Login" }];
+    return [
+      { href: "/login", label: "Login" },
+      { href: "/register", label: "Register" }
+    ];
   }
 
   if (user.role === "manager") {

@@ -49,21 +49,6 @@ export const UPLOAD_ROLES: UserRole[] = ["content-uploader", "manager"];
 export const QUIZ_SUBMIT_ROLES: UserRole[] = ["trainee", "manager"];
 export const MANAGER_ROLES: UserRole[] = ["manager"];
 
-export function getUserById(id: string): AuthUser | null {
-  const user = DEMO_USERS.find((item) => item.id === id);
-
-  if (!user) {
-    return null;
-  }
-
-  return {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role
-  };
-}
-
 export function getRoleHome(role: UserRole) {
   if (role === "manager") {
     return "/manager/progress";
